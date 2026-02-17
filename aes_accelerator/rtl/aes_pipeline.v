@@ -24,7 +24,7 @@ module aes_pipeline (
         .clk          (clk),
         .rst_n        (rst_n),
         .key_in       (key),
-        .key_valid    (data_valid),
+        .key_valid    (1'b1), // Always load for now, or update top level logic
         .round_key_0  (rk0),
         .round_key_1  (rk1),
         .round_key_2  (rk2),

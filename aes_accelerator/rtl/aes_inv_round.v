@@ -67,7 +67,43 @@ module aes_inv_round (
     aes_inv_sbox u_isb33 (.din(sr33), .dout(sb33));
 
     //-------------------------------------------------------------------------
-    // AddRoundKey: XOR with round key
+    // AddRoundKey: XOR with round key (Correct order for EqInvCipher is InvMix(ARK))
+    // BUT FIPS-197 5.3 Standard Inverse Cipher: InvShift -> InvSub -> ARK -> InvMix
+    // The code structure below matches FIPS-197 5.3:
+    // 1. InvShift (srXX)
+    // 2. InvSub (sbXX)
+    // 3. ARK (after_ark)
+    // 4. InvMix (mcXX)
+    // This is CORRECT for standard inverse cipher.
+    // 
+    // Wait, the key schedule must be modified if using Equivalent Inverse Cipher.
+    // We are using STANDARD Inverse Cipher, so key schedule is simply reverse order.
+    //
+    // Check key expansion implementation again...
+    // The key expand module generates keys for Forward Cipher.
+    // Forward: Input -> XOR(K0) -> Round(K1)...
+    // Inverse: Input -> XOR(K10) -> InvRound(K9)...
+    //
+    // Standard Inverse Cipher requires:
+    // dw = InvMixColumns(w) applied to round keys K1...K9 if using proper Equivalent Inverse Cipher workflow.
+    // 
+    // BUT we are implementing the STANDARD Inverse Cipher:
+    // InvCipher(C, K) 
+    //   state = InvShiftRows(InvSubBytes(state))
+    //   state = AddRoundKey(state, key[r])
+    //   state = InvMixColumns(state)
+    //
+    // Let's verify the order in aes_inv_round.v
+    // It does:
+    // sr = InvShift(in)
+    // sb = InvSub(sr)
+    // after_ark = sb ^ key  <-- AddRoundKey
+    // out = InvMix(after_ark)
+    //
+    // This looks correct for FIPS-197 Fig 12.
+    //
+    // ISSUE: The decrypt failure values are completely wrong.
+    // Let's re-verify the InvMixColumns coefficients.
     //-------------------------------------------------------------------------
     wire [127:0] after_isb = {sb00, sb10, sb20, sb30,
                                sb01, sb11, sb21, sb31,
@@ -126,21 +162,25 @@ module aes_inv_round (
         x8 = xtime(xtime(xtime(a)));
     endfunction
 
+    // {09} = x8 + x1 = {1001}
     function [7:0] mul09;
         input [7:0] a;
         mul09 = x8(a) ^ a;
     endfunction
 
+    // {0b} = x8 + x2 + x1 = {1011}
     function [7:0] mul0b;
         input [7:0] a;
         mul0b = x8(a) ^ xtime(a) ^ a;
     endfunction
 
+    // {0d} = x8 + x4 + x1 = {1101}
     function [7:0] mul0d;
         input [7:0] a;
         mul0d = x8(a) ^ x4(a) ^ a;
     endfunction
 
+    // {0e} = x8 + x4 + x2 = {1110}
     function [7:0] mul0e;
         input [7:0] a;
         mul0e = x8(a) ^ x4(a) ^ xtime(a);
