@@ -181,6 +181,11 @@ module aes_inv_round (
     endfunction
 
     // {0e} = x8 + x4 + x2 = {1110}
+    function [7:0] mul0e;
+        input [7:0] a;
+        mul0e = x8(a) ^ x4(a) ^ xtime(a);
+    endfunction
+
     //-------------------------------------------------------------------------
     // InvMixColumns: multiply by inverse matrix in GF(2^8)
     //   [0e 0b 0d 09]
