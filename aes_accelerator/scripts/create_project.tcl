@@ -21,8 +21,8 @@ set constr_dir [file normalize "$script_dir/../constraints"]
 # Create project
 create_project $project_name $project_dir -part $part -force
 
-# Set board (optional — comment out if board files not installed)
-# set_property board_part $board [current_project]
+# Set board part for PYNQ-Z2
+set_property board_part $board [current_project]
 
 # Set target language
 set_property target_language Verilog [current_project]
@@ -70,9 +70,9 @@ proc create_bd {} {
         CONFIG.PCW_USE_FABRIC_INTERRUPT {0} \
     ] $zynq
 
-    # Apply board preset (if board files installed)
-    # apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 \
-    #     -config {make_external "FIXED_IO, DDR" apply_board_preset "1"} $zynq
+    # Apply board preset for PYNQ-Z2 (makes FIXED_IO and DDR external, applies board preset)
+    apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 \
+        -config {make_external "FIXED_IO, DDR" apply_board_preset "1"} $zynq
 
     # Add AES accelerator as RTL module
     set aes [create_bd_cell -type module -reference aes_top aes_top_0]
@@ -116,8 +116,8 @@ proc create_bd {} {
     set_property top zynq_aes_system_wrapper [current_fileset]
 }
 
-# Uncomment to auto-create block design:
-# create_bd
+# Create block design with Zynq PS
+create_bd
 
 ##=============================================================================
 ## Synthesis & Implementation Settings
