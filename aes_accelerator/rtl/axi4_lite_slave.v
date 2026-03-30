@@ -248,7 +248,7 @@ module axi4_lite_slave #(
             axi_rvalid <= 1'b0;
             axi_rresp  <= 2'b00;
         end else begin
-            if (axi_arready && S_AXI_ARVALID && ~axi_rvalid) begin
+            if (axi_arready && ~axi_rvalid) begin
                 axi_rvalid <= 1'b1;
                 axi_rresp  <= 2'b00; // OKAY
             end else if (axi_rvalid && S_AXI_RREADY) begin
@@ -263,7 +263,7 @@ module axi4_lite_slave #(
     always @(posedge S_AXI_ACLK) begin
         if (!S_AXI_ARESETN) begin
             axi_rdata <= 32'b0;
-        end else if (axi_arready && S_AXI_ARVALID && ~axi_rvalid) begin
+        end else if (axi_arready && ~axi_rvalid) begin
             case (rd_addr)
                 7'h00: axi_rdata <= reg_key[0];
                 7'h04: axi_rdata <= reg_key[1];

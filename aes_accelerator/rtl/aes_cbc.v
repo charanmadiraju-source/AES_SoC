@@ -121,13 +121,35 @@ module aes_cbc (
         .plain_valid  (dec_plain_valid)
     );
 
-    // XOR decrypted block with feedback (IV or previous ciphertext)
-    wire [127:0] dec_plaintext_out = dec_plaintext_raw ^ feedback;
+    // Register the encrypt ciphertext when the pipeline output is valid.
+    // The encrypt pipeline runs continuously; latching the result on cipher_valid
+    // prevents the output from being overwritten before the host reads it.
+    reg [127:0] enc_result_reg;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            enc_result_reg <= 128'b0;
+        else if (enc_cipher_valid)
+            enc_result_reg <= enc_ciphertext_out;
+    end
+
+    // Register the XOR of the decrypted block with feedback.
+    // This must be captured when dec_plain_valid fires (state == PROCESS), before
+    // the feedback register is updated at state == DONE, to avoid using the
+    // already-updated feedback value for the current block's output.
+    reg [127:0] dec_result_reg;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            dec_result_reg <= 128'b0;
+        else if (dec_plain_valid)
+            dec_result_reg <= dec_plaintext_raw ^ feedback;
+    end
 
     //=========================================================================
     // Output mux: select encrypt or decrypt result
     //=========================================================================
-    assign dout = encrypt_mode ? enc_ciphertext_out : dec_plaintext_out;
+    assign dout = encrypt_mode ? enc_result_reg : dec_result_reg;
 
     // Combined valid from whichever pipeline is active
     wire result_valid = encrypt_mode ? enc_cipher_valid : dec_plain_valid;
